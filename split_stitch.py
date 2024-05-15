@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 
 # we divide the test image into 500x500px patches 
@@ -44,6 +45,13 @@ def stitch(patches, image_shape):
 		return image
 
 
+
+
+
+
+
+
+
 # img = cv2.imread('test/images/13/06.tif', cv2.IMREAD_GRAYSCALE)
 # patches = split('test/images/13/06.tif', 500)
 
@@ -71,6 +79,9 @@ def stitch(patches, image_shape):
 # axs[1].set_title('Stitched Image')
 # axs[1].axis('off')
 # plt.show()
+
+
+
 
 
 
