@@ -1,7 +1,6 @@
-import os 
 import cv2
-import glob
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 # we divide the test image into 500x500px patches 
@@ -12,79 +11,71 @@ def divide_image(image, size):
             patches.append(image[i:i+size, j:j+size])
     return patches
 
-# we process the patches by resizing them to 224x224px
+# we process the patches by resizing 
 def process_image(image, size):
     processed_image = cv2.resize(image, (size, size))
     return processed_image
 
 
-def stitchPatchImg(testpath, dir1, imgname, savefolder):
-  # stitch the visual feature map of patches to feature map of full image
-	name = os.path.join(dir1, imgname)
-	# print("name:"+name)
-	Im = testpath + name
-	I = [None]*16
-	for i in range(9):
-		print(Im+'_0'+str(i+1)+'.bmp')
-		patch = cv2.imread(Im+'_0'+str(i+1)+'.bmp')
-		I[i] = patch
-	for i in range(9,16):
-		print(Im+'_'+str(i+1)+'.bmp')
-		patch = cv2.imread(Im+'_'+str(i+1)+'.bmp')
-		I[i] = patch
-	#print(I)
-	A = np.zeros((4*500,4*500,3))
-	for row in range(4):
-		for col in range(4):
-			A[row*500:(row+1)*500,col*500:(col+1)*500] = I[row*4+col]
-	#print(A)
-
-	
-	cv2.imwrite(savefolder+'.jpg', A)
-	# print( savefolder + '.jpg')
+# we stitch the patches back together to form the original image
+def stitch_image(patches, image_shape):
+		image = np.zeros(image_shape)
+		idx = 0
+		size = patches[0].shape[0]
+		for i in range(0, image.shape[0], size):
+				for j in range(0, image.shape[1], size):
+						image[i:i+size, j:j+size] = patches[idx]
+						idx += 1
+		return image
 
 
-def resize_output_image(image_path, output_save_path):
-    # Load the output image
-	image_files = [f for f in os.listdir(image_path) if f.endswith(('.png', '.jpg', '.jpeg'))]
-	for image_file in image_files:
-		image_path2=image_path+image_file
-		img = cv2.imread(image_path2)
-		# print("this is the output: "+image_path2)
-		# print("------------------------------------------")
-
-        # Resize the output image back to 500x500 pixels
-		resized_img = cv2.resize(img, (500, 500), interpolation = cv2.INTER_CUBIC)
-
-        # Save the resized image
-		cv2.imwrite(output_save_path+image_file, resized_img)
-
-# Usage:
-#resize_output_image('D:\\PFE\\MASTER2\\2nd_test\\AMIDA13\\test\\test224\\1.jpg', 'D:\\PFE\\MASTER2\\2nd_test\\AMIDA13\\test\\test224\\2.jpg')
-
-# root_folder = 'D:\\PFE\\MASTER2\\2nd_test\\AMIDA13\\test\\4imgs\\'
-# dir1='13'
-# imgname='01.bmp'
-# savefolder="D:\\PFE\\MASTER2\\2nd_test\\AMIDA13\\test\\test_stitch\\13\\"
-#stitchPatchImg(root_folder,dir1,imgname,savefolder)
+def split(image_path, size):
+		image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+		patches = divide_image(image, size)
+		processed_patches = [process_image(patch, size) for patch in patches]
+		return processed_patches
 
 
-def stitch(imagefolder224,savefolderto500,savefolderto2000,dirname,testpath):
-	for j in dirname:
-		imagefolder=imagefolder224+j+'\\'
-		resize_output_image(imagefolder, savefolderto500+j+'\\')
-	for i in dirname:
-		files = glob.glob(testpath + i + '\\*')
-		files.sort()
-		last_file = files[-1]
-		# print("Last file in the folder:", last_file)
-		for k in range(int(last_file[-9:-7])):
-			stitchPatchImg(testpath,i,f"{k:02d}",savefolderto2000)
+def stitch(patches, image_shape):
+		# process the patches by resizing them to the original size
+		patches = [cv2.resize(patch, (500, 500)) for patch in patches]
+		# stitch the patches back together to form the original image
+		image = stitch_image(patches, image_shape)
+		return image
 
 
-dirname = ['13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23','24','25','26']
-imagefolder224='D:\\PFE\\MASTER2\\2nd_test\\AMIDA13\\test\\test224\\'
-savefolderto500='D:\\PFE\\MASTER2\\2nd_test\\AMIDA13\\test\\test500\\'
-savefolderto2000='D:\\PFE\\MASTER2\\2nd_test\\AMIDA13\\test\\test2000\\'
-testpath='D:\\PFE\\MASTER2\\2nd_test\\AMIDA13\\test\\4imgs\\'
-stitch(imagefolder224,savefolderto500,savefolderto2000,dirname,testpath)
+# img = cv2.imread('test/images/13/06.tif', cv2.IMREAD_GRAYSCALE)
+# patches = split('test/images/13/06.tif', 500)
+
+
+# # display the patches plot
+# fig, axs = plt.subplots(1, len(patches), figsize=(20, 20))
+# for i, patch in enumerate(patches):
+# 		axs[i].imshow(patch, cmap='gray')
+# 		axs[i].axis('off')
+# plt.show()
+
+# # stitch the patches back together to form the original image
+# stitched_image = stitch(patches, img.shape)
+
+# # save the stitched image
+# cv2.imwrite('stitched_image.png', stitched_image)
+
+
+# # display the stitched image and the original image
+# fig, axs = plt.subplots(1, 2, figsize=(20, 20))
+# axs[0].imshow(img, cmap='gray')
+# axs[0].set_title('Original Image')
+# axs[0].axis('off')
+# axs[1].imshow(stitched_image, cmap='gray')
+# axs[1].set_title('Stitched Image')
+# axs[1].axis('off')
+# plt.show()
+
+
+
+
+
+
+
+
