@@ -1,6 +1,10 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+from skimage.filters import threshold_otsu
+from scipy.ndimage import gaussian_filter
+import matplotlib.pyplot as plt
 
 
 def gaussian2d(sigma, size):
@@ -22,9 +26,10 @@ def otsu(image):
         p1, p2 = np.hsplit(hist_norm, [i])
         q1, q2 = Q[i], Q[255] - Q[i]
         b1, b2 = np.hsplit(bins, [i])
-        m1, m2 = np.sum(p1 * b1) / q1, np.sum(p2 * b2) / q2
-        v1, v2 = np.sum(((b1 - m1) ** 2) * p1) / q1, np.sum(((b2 - m2) ** 2) * p2) / q2
-        fn = v1 * q1 + v2 * q2
+        epsilon = 1e-8 
+        m1, m2 = np.sum(p1 * b1) / (q1 + epsilon), np.sum(p2 * b2) / (q2 + epsilon) 
+        v1, v2 = np.sum(((b1 - m1) ** 2) * p1) / (q1 + epsilon), np.sum(((b2 - m2) ** 2) * p2) / (q2 + epsilon)
+        fn = v1 * q1 + v2 * q2  
         if fn < fn_min:
             fn_min = fn
             thresh = i
@@ -41,35 +46,87 @@ def apply_morphological_operations(image):
     return cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
 
 
-def get_blobs_stats(image):
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(image, connectivity=8)
-    return num_labels, labels, stats, centroids
 
-
-def remove_small_blobs(image, labels, num_labels, stats, min_area):
-  for i in range(1, num_labels):
-    _, _, _, _, area = stats[i]
-    if area < min_area:
-      image[labels == i] = 0
-  return image
 
 
 def draw_centroids(image, num_labels, centroids):
     image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     for i in range(1, num_labels):
         x, y = centroids[i]
-        cv2.circle(image, (int(x), int(y)), 1, (255, 0, 0), -1)
+        cv2.circle(image, (int(x), int(y)), 5, (255, 0, 0), -1)
     return image
 
 
-def pipeline(image, sigma, size, min_area):
-    image = apply_gaussian_filter(image, sigma, size)
-    image = apply_binarisation(image)
-    image = apply_morphological_operations(image)
+
+def get_blobs_stats(image):
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(image.astype(np.uint8), connectivity=8)
+    return num_labels, labels, stats, centroids
+
+def remove_small_blobs(image, labels, num_labels, stats, min_area):
+    filtered_image = np.zeros_like(image)
+    for label in range(1, num_labels):
+        if stats[label, cv2.CC_STAT_AREA] >= min_area:
+            filtered_image[labels == label] = image[labels == label]
+    return filtered_image
+
+def pipeline(image, min_area):
     num_labels, labels, stats, centroids = get_blobs_stats(image)
     image = remove_small_blobs(image, labels, num_labels, stats, min_area)
     num_labels, labels, stats, centroids = get_blobs_stats(image)
-    image = draw_centroids(image, num_labels, centroids)
     return image, num_labels, centroids
+
+def score_filtering(segmentation_map, area_threshold=590, confidence_threshold=0.5, sigma=1.5):
+    # Step 1: Gaussian Smoothing
+    smoothed_map = gaussian_filter(segmentation_map, sigma=sigma)
+
+    # Step 2: Binarization using Otsu's method
+    otsu_threshold = threshold_otsu(smoothed_map)
+    binary_map = smoothed_map > otsu_threshold
+
+    # Step 3: Label connected components
+    num_labels, labels_im = cv2.connectedComponents(binary_map.astype(np.uint8))
+
+    # Step 4: Area and Score Filtering
+    final_detection_map = np.zeros_like(segmentation_map)
+    
+    for label in range(1, num_labels):
+        blob = (labels_im == label)
+        area = np.sum(blob)
+        mean_score = np.mean(segmentation_map[blob])
+
+        if area >= area_threshold and mean_score >= confidence_threshold:
+            final_detection_map[blob] = binary_map[blob]
+
+    return final_detection_map
+
+image_dir = 'stitchedImages'
+
+if not os.path.exists('results/masks'):
+    os.makedirs('results/masks')
+if not os.path.exists('results/csv'):
+    os.makedirs('results/csv')
+
+for image_name in os.listdir(image_dir):
+    image_path = os.path.join(image_dir, image_name)
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    print(f"Processing image: {image_name}")
+    image_filtered = score_filtering(image, area_threshold=600, confidence_threshold=0.5, sigma=1.5)
+
+    _, num_labels, center = pipeline(image_filtered, 590)
+
+
+    # Normalize the filtered image to 0-255 range before saving
+    norm_filtered = cv2.normalize(image_filtered, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+    norm_filtered = norm_filtered.astype(np.uint8)
+
+    cv2.imwrite(f'results/masks/{image_name}', norm_filtered)
+
+    # Save centroids to a CSV file
+    with open(f'results/csv/{image_name}.csv', 'w') as file:
+        file.write('x,y\n')
+        for x, y in center[1:]:
+            file.write(f'{x},{y}\n')
+
+
 
 

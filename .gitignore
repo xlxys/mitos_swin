@@ -5,4 +5,7 @@ model/model v2.pth
 model/model v1.pth
 test/
 output/
+results/
+stitchedImages/
+predictions/
 

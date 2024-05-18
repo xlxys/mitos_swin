@@ -6,6 +6,7 @@ from PIL import Image
 import os
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 class Amida13TestDataset():
     def __init__(self, data_dir, transform=None):
@@ -29,7 +30,7 @@ class Amida13TestDataset():
 
 # Define transforms for data augmentation and normalization
 transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=1),
+    # transforms.Grayscale(num_output_channels=1),
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
 ])
@@ -38,20 +39,18 @@ transform = transforms.Compose([
 data_dir = r'test/output_dir'
 dataset = Amida13TestDataset(data_dir, transform=transform)
 
-# Verify the dataset
-print(len(dataset))
-print(dataset[0][0].shape)
-print(dataset[0][1].shape)
-
-# Create data loaders for test set
-batch_size = 64
-test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
 # Load the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = SwinUNet(224,224,1,32,1,3,4).to(device)
-model.load_state_dict(torch.load("model/model v4.pth", map_location=device))
+model = SwinUNet(224,224,3,32,1,3,4).to(device)
+model.load_state_dict(torch.load("model/model_v7.pth", map_location=device))
 model.eval()
+
+# print(model)
+
+batch_size = 64
+test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+
 
 # Create output directory if it does not exist
 output_dir = 'output'

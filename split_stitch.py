@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import os
 
 
+
 # we divide the test image into 500x500px patches 
 def divide_image(image, size):
     patches = []
@@ -46,39 +47,103 @@ def stitch(patches, image_shape):
 
 
 
+# # Define the directory containing the output patches
+# output_dir = 'output'
+# stitched_output_dir = 'StitchedImages'
+# os.makedirs(stitched_output_dir, exist_ok=True)
+
+# # Get sorted list of image files
+# image_files = sorted([f for f in os.listdir(output_dir) if f.endswith('.png')])
+
+# # load all image with the same prefix
+# patches = []
+# name='1301'
+# for images in image_files:
+# 		if images.endswith('.png'):
+# 				image_path = os.path.join('output', images)
+# 				if images.startswith(name):
+# 						patches.append(image_path)
+# 						print(f"{len(patches)} name: {name}")
+# 				else:
+# 					patches = sorted(patches)
+
+# 					patches = [cv2.imread(patch, cv2.IMREAD_GRAYSCALE) for patch in patches]
+					
+
+# 					# # display the patches plot
+# 					# fig, axs = plt.subplots(1, len(patches), figsize=(20, 20))
+# 					# for i, patch in enumerate(patches):
+# 					# 		axs[i].imshow(patch, cmap='gray')
+# 					# 		axs[i].axis('off')
+# 					# plt.show()
+# 					print('Stitching patches together...')
+# 					# stitch the patches back together to form the original image
+# 					stitched_image = stitch(patches, (2000, 2000))
+
+# 					# save the stitched image
+# 					cv2.imwrite('StitchedImages/'+name+'.png', stitched_image)
+# 					patches=[]
+# 					stitched_image=[]
+# 					print(images[0:4])
+# 					name=images[0:4]
+
+
+# Define the directory containing the output patches
+output_dir = 'output'
+stitched_output_dir = 'stitchedImages'
+os.makedirs(stitched_output_dir, exist_ok=True)
+
+# Get sorted list of image files
+image_files = sorted([f for f in os.listdir(output_dir) if f.endswith('.png')])
+
+# Load all images with the same prefix
+patches = []
+name = '1301'
+for image_file in image_files:
+    image_path = os.path.join(output_dir, image_file)
+    if image_file.startswith(name):
+        patches.append(image_path)
+        print(f"{len(patches)} patches collected for prefix {name}")
+    else:
+        if patches:
+            patches = sorted(patches)
+            patches = [cv2.imread(patch, cv2.IMREAD_GRAYSCALE) for patch in patches]
+
+            
+
+            print('Stitching patches together...')
+            # Stitch the patches back together to form the original image
+            stitched_image = stitch(patches, (2000, 2000))
+
+            # Save the stitched image
+            stitched_image_name = os.path.join(stitched_output_dir, f'{name}.png')
+            cv2.imwrite(stitched_image_name, stitched_image)
+            patches = []
+
+        # Update name and collect new patches
+        name = image_file[:4]
+        patches.append(image_path)
+
+# Process remaining patches if any
+if patches:
+    patches = sorted(patches)
+    print(f"Processing {len(patches)} patches for prefix {name}")
+    patches = [cv2.imread(patch, cv2.IMREAD_GRAYSCALE) for patch in patches]
+
+    print('Stitching patches together...')
+    # Stitch the patches back together to form the original image
+    stitched_image = stitch(patches, (2000, 2000))
+
+    # Save the stitched image
+    stitched_image_name = os.path.join(stitched_output_dir, f'{name}.png')
+    cv_file_name = os.path.join(stitched_output_dir, stitched_image_name)
+    cv2.imwrite(cv_file_name, stitched_image)
+
+print("Stitching completed.")
 
 
 
 
-
-
-# img = cv2.imread('test/images/13/06.tif', cv2.IMREAD_GRAYSCALE)
-# patches = split('test/images/13/06.tif', 500)
-
-
-# # display the patches plot
-# fig, axs = plt.subplots(1, len(patches), figsize=(20, 20))
-# for i, patch in enumerate(patches):
-# 		axs[i].imshow(patch, cmap='gray')
-# 		axs[i].axis('off')
-# plt.show()
-
-# # stitch the patches back together to form the original image
-# stitched_image = stitch(patches, img.shape)
-
-# # save the stitched image
-# cv2.imwrite('stitched_image.png', stitched_image)
-
-
-# # display the stitched image and the original image
-# fig, axs = plt.subplots(1, 2, figsize=(20, 20))
-# axs[0].imshow(img, cmap='gray')
-# axs[0].set_title('Original Image')
-# axs[0].axis('off')
-# axs[1].imshow(stitched_image, cmap='gray')
-# axs[1].set_title('Stitched Image')
-# axs[1].axis('off')
-# plt.show()
 
 
 
